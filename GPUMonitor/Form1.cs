@@ -305,7 +305,7 @@ namespace GPUMonitor
             CvPoint maxLoc;
 
             Cv.MinMaxLoc(resImg, out minVal, out maxVal, out minLoc, out maxLoc);
-            string val = minVal.ToString("00000000.00000");
+            string val = minVal.ToString("0.00000");
             score = val;
             lock(thisLock)
             {
