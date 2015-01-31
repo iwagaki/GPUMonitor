@@ -249,6 +249,9 @@ namespace GPUMonitor
                     if (threadState.waitState())
                         return;
 
+                    if (findTemplate(obj0, new Rectangle(1000, 850, 100, 100), 0.05, false))
+                        break;
+
                     if (!findTemplate(obj1, new Rectangle(908, 410, 100, 200), 0.0005))
                     {
                         lock (thisLock)
@@ -263,10 +266,10 @@ namespace GPUMonitor
             }
         }
         
-        private bool findTemplate(Bitmap image, Rectangle rect, double th)
+        private bool findTemplate(Bitmap image, Rectangle rect, double th, bool update = true)
         {
             g.CopyFromScreen(new Point(rect.Left, rect.Top), new Point(rect.Left, rect.Top), rect.Size);
-            return findImage(bmp, image, rect, th);
+            return findImage(bmp, image, rect, th, update);
         }
 
         [DllImport("user32.dll")]
@@ -284,7 +287,7 @@ namespace GPUMonitor
             return Process.GetProcessById(processid).ProcessName;
         }
 
-        private bool findImage(Bitmap screenBitmap, Bitmap targetBitmap, Rectangle searchRect, double th)
+        private bool findImage(Bitmap screenBitmap, Bitmap targetBitmap, Rectangle searchRect, double th, bool update)
         {
             Bitmap croppedScreenBitmap = screenBitmap.Clone(searchRect, screenBitmap.PixelFormat);
 
@@ -306,13 +309,16 @@ namespace GPUMonitor
             score = val;
             lock(thisLock)
             {
-                lastBitmap = croppedScreenBitmap;
+                if (update)
+                    lastBitmap = croppedScreenBitmap;
 
                 if ((minVal < th))
                 {
-
-                    Graphics g = Graphics.FromImage(croppedScreenBitmap);
-                    g.DrawRectangle(new Pen(Color.Red, 2), new Rectangle(minLoc.X, minLoc.Y, targetImage.Width, targetImage.Height));
+                    if (update)
+                    {
+                        Graphics g = Graphics.FromImage(croppedScreenBitmap);
+                        g.DrawRectangle(new Pen(Color.Red, 2), new Rectangle(minLoc.X, minLoc.Y, targetImage.Width, targetImage.Height));
+                    }
                     return true;
                 }
                 return false;
