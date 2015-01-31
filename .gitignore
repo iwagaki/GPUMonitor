@@ -1,0 +1,10 @@
+
+*.suo
+*.user
+obj
+[Dd]ebug
+*.dll
+opencv
+OpenCVSharp*
+*.xml
+*.exe
