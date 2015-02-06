@@ -88,11 +88,13 @@ namespace GPUMonitor
 //            reset();
         }
 
-        private void reset()
+        private delegate void threadObject();
+
+        private void reset(threadObject func)
         {
             stop();
             threadState.setState(1);
-            t = new System.Threading.Thread(new System.Threading.ThreadStart(mainLoop));
+            t = new System.Threading.Thread(new System.Threading.ThreadStart(func));
             t.Start();
         }
 
@@ -212,7 +214,18 @@ namespace GPUMonitor
             }
         }
 
-        private void mainLoop()
+
+        private void macro1()
+        {
+            mainLoop(false);
+        }
+
+        private void macro2()
+        {
+            mainLoop(true);
+        }
+
+        private void mainLoop(bool isNegative)
         {
             while (true)
             {
@@ -252,7 +265,7 @@ namespace GPUMonitor
                     if (findTemplate(obj0, new Rectangle(1000, 850, 100, 100), 0.05, false))
                         break;
 
-                    if (!findTemplate(obj1, new Rectangle(908, 410, 100, 200), 0.0005))
+                    if (isNegative ^ findTemplate(obj1, new Rectangle(908, 410, 100, 200), 0.0005))
                     {
                         lock (thisLock)
                         {
@@ -333,7 +346,12 @@ namespace GPUMonitor
 
         private void button2_Click(object sender, EventArgs e)
         {
-            reset();
+            reset(macro1);
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            reset(macro2);
         }
     }
 }
