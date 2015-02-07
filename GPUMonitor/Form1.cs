@@ -42,6 +42,87 @@ namespace GPUMonitor
         private Bitmap lastBitmap = null;
         private string targetAppName = null;
 
+        public class ImageObject
+        {
+            private string objectName = null;
+            private Rectangle rect;
+            private Bitmap bitmap;
+            private double scoreThreshold;
+            private static Graphics parentGraphics;
+            private static Bitmap parentBitmap;
+            private static string debugScore;
+            private static Bitmap debugBitmap;
+
+            static public void setParent(Graphics graphics, Bitmap bitmap, string score, Bitmap lastBitmap)
+            {
+                parentBitmap = bitmap;
+                parentGraphics = graphics;
+                debugScore = score; // TODO
+                debugBitmap = lastBitmap;
+            }
+
+            static public ImageObject create(string objectName, Rectangle rectOnParent, double scoreThreshold, string path)
+            {
+                ImageObject obj = new ImageObject();
+                obj.objectName = objectName;
+                obj.rect = rectOnParent;
+                obj.scoreThreshold = scoreThreshold;
+                
+                obj.bitmap = new Bitmap(path);
+
+                return obj;
+            }
+
+            public bool findImageInScreen(Object lockObject, bool update = true)
+            {
+                captureScreen();
+                return findImageIn(parentBitmap, lockObject, update);
+            }
+
+            public bool findImageIn(Bitmap targetBitmap, Object lockObject, bool update)
+            {
+                Bitmap croppedScreenBitmap = parentBitmap.Clone(rect, parentBitmap.PixelFormat);
+
+                IplImage screenImage = BitmapConverter.ToIplImage(croppedScreenBitmap);
+                IplImage targetImage = BitmapConverter.ToIplImage(targetBitmap);
+
+                CvSize resSize = new CvSize(screenImage.Width - targetImage.Width + 1, screenImage.Height - targetImage.Height + 1);
+                IplImage resImg = Cv.CreateImage(resSize, BitDepth.F32, 1);
+
+                Cv.MatchTemplate(screenImage, targetImage, resImg, MatchTemplateMethod.SqDiffNormed);
+
+                double minVal;
+                double maxVal;
+                CvPoint minLoc;
+                CvPoint maxLoc;
+
+                Cv.MinMaxLoc(resImg, out minVal, out maxVal, out minLoc, out maxLoc);
+                string val = minVal.ToString("0.00000");
+               debugScore = val;
+                lock (lockObject)
+                {
+                    if (update)
+                        debugBitmap = croppedScreenBitmap;
+
+                    if ((minVal < scoreThreshold))
+                    {
+                        if (update)
+                        {
+                            Graphics g = Graphics.FromImage(croppedScreenBitmap);
+                            g.DrawRectangle(new Pen(Color.Red, 2), new Rectangle(minLoc.X, minLoc.Y, targetImage.Width, targetImage.Height));
+                        }
+                        return true;
+                    }
+                    return false;
+                }
+            }
+
+            private void captureScreen()
+            {
+                parentGraphics.CopyFromScreen(new Point(rect.Left, rect.Top), new Point(rect.Left, rect.Top), rect.Size);
+            }
+        }
+
         public Form1()
         {
             InitializeComponent();
