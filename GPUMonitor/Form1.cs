@@ -34,7 +34,6 @@ namespace GPUMonitor
         private Bitmap icon;
         private Bitmap obj0;
         private Bitmap obj1;
-        private bool isActive = false;
         string score = "";
         string key = null;
         private Object thisLock = new Object();
@@ -154,19 +153,14 @@ namespace GPUMonitor
 
 
             bmp = new Bitmap(Screen.PrimaryScreen.Bounds.Width, Screen.PrimaryScreen.Bounds.Height);
+            g = Graphics.FromImage(bmp);
+
             icon = new Bitmap(@"icon.bmp");
 
             XmlNodeList nodes = configXml.SelectNodes("/configuration/objects/object");
 
-            obj0 = new Bitmap(nodes[0].SelectSingleNode("file").InnerText);
-            obj1 = new Bitmap(nodes[1].SelectSingleNode("file").InnerText);
-
-            
-//            castingIcon = new Bitmap(@"casting_icon.bmp");
-//            hpBar = new Bitmap(@"hp_bar.bmp");
-            g = Graphics.FromImage(bmp);
-
-//            reset();
+            obj0 = new Bitmap(nodes[0].SelectSingleNode("file").InnerText); // casting_icon.bmp
+            obj1 = new Bitmap(nodes[1].SelectSingleNode("file").InnerText); // hp_bar.bmp
         }
 
         private delegate void threadObject();
@@ -174,7 +168,7 @@ namespace GPUMonitor
         private void reset(threadObject func)
         {
             stop();
-            threadState.setState(1);
+            threadState.setState(State.threadState.ACTIVE);
             t = new System.Threading.Thread(new System.Threading.ThreadStart(func));
             t.Start();
         }
@@ -202,7 +196,7 @@ namespace GPUMonitor
 
         private void pictureBox1_Click(object sender, EventArgs e)
         {
-#if true
+#if false
 
             MODI.Document doc = new MODI.Document();
             doc.Create(@"test.bmp");
@@ -231,11 +225,25 @@ namespace GPUMonitor
 
         }
 
+        // timer1 object is placed in Form1.cs (Design)
         private void timer1_Tick(object sender, EventArgs e)
         {
             string appName = GetActiveApplicationName();
             label1.Text = appName;
             label2.Text = score;
+
+            //Rectangle rect = new Rectangle(1000, 850, 100, 100);
+            //g.CopyFromScreen(new Point(rect.Left, rect.Top), new Point(rect.Left, rect.Top), rect.Size);
+            //Bitmap croppedScreenBitmap = screenBitmap.Clone(searchRect, screenBitmap.PixelFormat);
+            //lastBitmap = croppedScreenBitmap;
+
+            //Rectangle rect = Screen.PrimaryScreen.Bounds;
+            //bmp = new Bitmap(rect.Width, rect.Height);
+            //Graphics g = Graphics.FromImage(bmp);
+            //g.CopyFromScreen(rect.X, rect.Y, 0, 0, rect.Size);
+            //lastBitmap = bmp;
+
+            //            pictureBox1.Image = lastBitmap;
 
             if (lastBitmap != null)
             {
@@ -248,8 +256,7 @@ namespace GPUMonitor
 
             if (appName == targetAppName)
             {
-                isActive = true;
-                threadState.setState(2);
+                threadState.setState(State.threadState.ACTIVE);
                 lock(thisLock)
                 {
                     if (key != null)
@@ -261,17 +268,17 @@ namespace GPUMonitor
             }
             else
             {
-                threadState.setState(1);
-                isActive = false;
+                threadState.setState(State.threadState.SUSPENDED);
             }
         }
 
         class State
         {
-            private int state = 0;
+            public enum threadState {EXIT, SUSPENDED, ACTIVE };
+            private threadState state = threadState.EXIT;
             private Object stateLock = new Object();
 
-            public void setState(int state)
+            public void setState(threadState state)
             {
                 lock (stateLock)
                 {
@@ -285,9 +292,9 @@ namespace GPUMonitor
                 {
                     lock (stateLock)
                     {
-                        if (state == 0)
+                        if (state == threadState.EXIT)
                             return true;
-                        if (state == 2)
+                        if (state == threadState.ACTIVE)
                             return false;
                     }
                     Thread.Sleep(500);
@@ -308,6 +315,7 @@ namespace GPUMonitor
 
         private void mainLoop(bool isNegative)
         {
+            Console.WriteLine("INFO: Thread has been started");
             while (true)
             {
                 if (threadState.waitState())
@@ -332,9 +340,7 @@ namespace GPUMonitor
                 Thread.Sleep(1000);
 
                 if (findTemplate(obj0, new Rectangle(1000, 850, 100, 100), 0.05))
-                {
-                    return;
-                }
+                    continue;
 
                 Thread.Sleep(5000);
 
@@ -359,7 +365,7 @@ namespace GPUMonitor
                 Thread.Sleep(500);
             }
         }
-        
+
         private bool findTemplate(Bitmap image, Rectangle rect, double th, bool update = true)
         {
             g.CopyFromScreen(new Point(rect.Left, rect.Top), new Point(rect.Left, rect.Top), rect.Size);
@@ -393,8 +399,8 @@ namespace GPUMonitor
 
             Cv.MatchTemplate(screenImage, targetImage, resImg, MatchTemplateMethod.SqDiffNormed);
 
-            double minVal;
-            double maxVal;
+            double minVal = 0.0;
+            double maxVal = 0.0;
             CvPoint minLoc;
             CvPoint maxLoc;
 
@@ -404,7 +410,9 @@ namespace GPUMonitor
             lock(thisLock)
             {
                 if (update)
+                {
                     lastBitmap = croppedScreenBitmap;
+                }
 
                 if ((minVal < th))
                 {
@@ -422,16 +430,19 @@ namespace GPUMonitor
 
         private void button1_Click(object sender, EventArgs e)
         {
+            Console.WriteLine("INFO: STOP");
             stop();
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
+            Console.WriteLine("INFO: MACRO1");
             reset(macro1);
         }
 
         private void button3_Click(object sender, EventArgs e)
         {
+            Console.WriteLine("INFO: MACRO2");
             reset(macro2);
         }
     }

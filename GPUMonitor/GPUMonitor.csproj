@@ -103,6 +103,7 @@
   <ItemGroup>
     <Content Include="config.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <SubType>Designer</SubType>
     </Content>
     <Content Include="opencv_calib3d2410.dll">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
